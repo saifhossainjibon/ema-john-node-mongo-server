@@ -19,15 +19,41 @@ async function run() {
         await client.connect();
         const database = client.db('online_shop');
         const productCollection = database.collection('products');
+        const orderCollection = database.collection('orders')
+
         // GET API
         app.get('/products', async (req, res) => {
             const cursor = productCollection.find({})
-            // const products = await cursor.limit(5).toArray();
-            const products = await cursor.toArray();
+            const page = req.query.page;
+            const size = parseInt(req.query.size);
             const count = await cursor.count();
+            let products;
+            if (page) {
+                products = await cursor.skip(page * size).limit(size).toArray();
+            }
+            else {
+                products = await cursor.toArray();
+            }
+            // const products = await cursor.limit(5).toArray();
             res.send({ count, products });
         })
-        // console.log("uri")
+        // USE POST to get data by keys
+        app.post('/products/byKeys', async (req, res) => {
+            const keys = req.body;
+            const query = { key: { $in: keys } }
+            const products = await productCollection.find(query).toArray();
+            res.send(products)
+            // const page = req.query
+        })
+
+        // APP Orders API
+        app.post('/orders', async (req, res) => {
+            const order = req.body;
+            const results = await orderCollection.insertOne(order)
+            // console.log('orders', orders);
+            res.json(results)
+        })
+
     }
     finally {
         // await client.close();
